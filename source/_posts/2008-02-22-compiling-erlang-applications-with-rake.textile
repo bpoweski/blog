@@ -1,0 +1,51 @@
+---
+layout: post
+title: "Compiling Erlang Applications with Rake"
+date: 2008-02-22 17:03
+comments: true
+categories: 
+---
+
+The irony of Rake is that Ruby really doesn’t need it. This is not to say it isn’t useful to Ruby projects, quite the contrary. Where Rake shines is in building software for applications that require byte code and object code, such as Java or C centric projects. 
+
+One such language requiring byte code compilation is <a href="http://www.erlang.org/">Erlang</a>. The design of the runtime environment used by Erlang should be familiar to most Java or C# developers. Erlang uses a byte code compiler (erlc) and various application meta-data files (.app, .rel, .config). For my development work I use Erlide, the Eclipse based Erlang IDE. The standard project layout for an application created in <a href="http://erlide.sourceforge.net/">Erlide</a> is: 
+
++ project
+  - ebin
+  - include
+  - src
+
+When creating a Rake file for Erlang projects, I ran into a few problems with compiling the source into the separate ebin directory. Namely, dependencies where not being constructed as desired yielding a full rebuild every time I ran the build script! In the following example I dynamically create the file rules so that the bytecode (.beam) files will only be recompiled if the source (.erl) file is changed. 
+
+
+{% codeblock %}
+require 'rake'
+require 'rake/clean'
+
+CLEAN.include(['ebin/*.beam', '*.dump'])
+SRC = FileList['src/**/*.erl']
+BEAM = []
+
+SRC.each do |fn|
+  BEAM << dest = File.join('ebin', File.basename(fn).ext('beam'))
+  file dest do
+    sh "erlc -o ebin #{fn}" 
+  end
+end
+
+namespace :erlang do
+  desc "staring ermail" 
+    task :run => [:compile] do
+      sh("erl -noshell -pa ebin -s my_mod start")
+    end
+
+  desc "run tests" 
+  task :test => BEAM do
+    sh("erl -noshell -s test_my_mod test -s init stop")
+  end
+end
+
+task :default => [:compile]
+task :start => ['erlang:run']
+task :compile => BEAM
+{% endcodeblock %}

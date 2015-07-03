@@ -1,0 +1,89 @@
+---
+layout: post
+title: "A Simple Monte Carlo Experiment in R: More &#120587;"
+date: 2014-03-29 17:03
+comments: true
+categories:
+---
+
+Monte Carlo simulations (or Monte Carlo methods) are a simple but useful technique to derive a solution to a problem by randomly guessing possible inputs.  The definition is so broad that it's likely you've used this technique without even realizing it.
+
+The hello world problem for Monte Carlo applications is undoubtedly calculating approximations of &#120587;, albeit ineffeciently.
+
+h3. It's Always About Darts
+
+Before we can write software to do this we need to think about how to restate the question in probablistic terms.  &#120587; is simply the ratio of a circle's circumference to its diamater.
+
+bq. <script type="math/tex">\pi = \frac{C}{d}</script>
+
+We also know the area of circle is:
+
+bq. <script type="math/tex">A_c = \pi r^2</script>
+
+Suppose a circle was inscribed inside of a square.
+
+{% img /images/circle_in_square.png 2100 2100px %}
+
+We could then define the area of the square in terms of the circle's diameter:
+
+bq. <script type="math/tex">A_s = lw = dd = d^2</script>
+
+Or in terms of the circles radius:
+
+bq. <script type="math/tex">A_s = (2r)^2 = 4r^2</script>
+
+Now, onto the darts.  Imagine you're throwing darts at the square.  The universe is constrainted such that every dart lands randomly inside of the square.
+
+The probability of a dart hitting the circle is the radio of the area of the circle over the square.
+
+bq.  <script type="math/tex">\frac{A_c}{A_s} = \frac{\pi r^2}{4r^2}</script>
+
+Which means:
+
+bq.  <script type="math/tex">\pi = 4\frac{A_c}{A_s}</script>
+
+Restated another way:
+
+bq.  <script type="math/tex">\frac{\pi}{4} = \frac{A_c}{A_s}</script>
+
+Now that we know a fourth of &#120587;, we can limit our trial to one quadrant because the ratio still holds true.  This isn't strictly nessecary but it simplies the program.
+
+{% codeblock %}
+library("ggplot2")
+
+set.seed(13)
+
+make.pi <- function(n) {
+    darts <- data.frame(x=runif(n), y=runif(n))
+    darts$hit <- (darts$x^2 + darts$y^2) <= 1
+    darts
+}
+
+calc.pi <- function(df) {
+    4*sum(df$hit)/nrow(df)
+}
+{% endcodeblock %}
+
+Here we have the @make.pi@ function that creates an R @data.frame@ that holds the trials containing the X & Y coordinates of the dart position.
+
+{% codeblock %}
+sim <- make.pi(10000)
+ggplot(sim, aes(x, y, color=hit)) + geom_point() + ggtitle(calc.pi(sim))
+{% endcodeblock %}
+
+This plot gives us a visualization of where each trial lands.
+
+{% img /images/quarter_circle.png %}
+
+{% codeblock %}
+attempts <- seq(1, 100000, by=50)
+estimated <- sapply(attempts, function(x) abs(calc.pi(make.pi(x)) - pi)/pi)
+
+ggplot(data.frame(estimated=estimated, n=attempts)) + geom_line(aes(x=n, y=estimated)) + ylab("error %")
+{% endcodeblock %}
+
+And finally we can check how well this solution scales with different size trials.
+
+
+{% img /images/error.png %}
+

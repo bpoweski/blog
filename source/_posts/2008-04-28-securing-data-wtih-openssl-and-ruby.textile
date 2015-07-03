@@ -1,0 +1,44 @@
+---
+layout: post
+title: "Securing Data wtih OpenSSL and Ruby: Part One"
+date: 2008-04-28 16:56
+comments: true
+categories: ruby
+---
+
+For the most part Ruby has fantastic APIs.  While there is an occasional wart here and there (I"m speaking to you [DateTime](http://www.ruby-forum.com/topic/146117)).  In general, it doesn't suck.  The OpenSSL bindings for Ruby are no exception.
+
+## Bob, meet Alice ##
+
+To begin our cultural learnings of OpenSSL and Ruby, let's take a look at source repository for the interpreter. In the [samples](http://svn.ruby-lang.org/cgi-bin/viewvc.cgi/trunk/sample/openssl/) directory are some nice examples how the bindings work.  It seems that some of the original code examples were never migrated from the RubyPKI project, but thats ok, you can still access [them](http://cvs.savannah.gnu.org/viewvc/rubypki/ossl2/examples/) here.
+
+## The OpenSSL Digest Class ##
+
+One of the most common things you'll most likely need is to create a digest of a string of data.  We can do this using by instantiating a Digest class then invoking the hexdigest method.
+
+{% codeblock %}
+irb(main):001:0> require 'openssl'
+=> true
+irb(main):002:0> @sha1 = OpenSSL::Digest::SHA1.new("fooooo")
+=> 58c00efa9bed725721b29f4b5f7864f0f191cad5
+irb(main):003:0> @sha1.hexdigest
+=> "58c00efa9bed725721b29f4b5f7864f0f191cad5"
+irb(main):005:0>
+{% endcodeblock %}
+
+Simple enough.  But what is the deal with 'digest' versus 'openssl/digest'?  According to the 'digest' module is only used for backwards compatibility, so use the openssl version when possible.
+
+## Available Digest Algorithms ##
+
+According to the source, the Digest algorithms available are dependent upon the version of OpenSSL compiled with Ruby.
+
+{% codeblock %}
+module OpenSSL
+  class Digest
+
+    alg = %w(DSS DSS1 MD2 MD4 MD5 MDC2 RIPEMD160 SHA SHA1)
+    if OPENSSL_VERSION_NUMBER > 0x00908000
+      alg += %w(SHA224 SHA256 SHA384 SHA512)
+    end
+    ...
+{% endcodeblock %}

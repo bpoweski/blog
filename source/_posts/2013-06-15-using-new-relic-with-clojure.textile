@@ -1,0 +1,78 @@
+---
+layout: post
+title: "Using New Relic with Clojure"
+date: 2013-06-15 14:48
+comments: true
+categories:
+---
+
+At "getaroom.com":http://www.getaroom.com we've used "New Relic":http://newrelic.com extensively for many years to monitor our Rails applications.  We've recently began moving our backend infastructure to Clojure, maintaing the visibility New Relic gave us for our Rails environment was a must.
+
+New Relic's product is great, but the ability to add custom instrumention to a Clojure application is less than ideal.  The primary method of custom instrumentation using New Relic's Java agent is via custom annotations.  Sean Corfield wrote an excellent "post":http://corfield.org/blog/post.cfm/instrumenting-clojure-for-new-relic-monitoring on how to get this to work using *deftype*.
+
+h3.  Setup New Relic
+
+Adding the New Relic API jar will permit custom metrics via the "Java API":https://newrelic.com/docs/java/java-agent-api.  At getaroom we use it expose a number of metrics about our business of selling hotel rooms.  These metrics can be displayed using custom dashboards along with many of the standard graphs available but they don't provide the same insight that instrumentation of underlying function calls can provide.
+
+{% codeblock Add New Relic API jar lang:clojure %}
+:dependencies [...
+               [newrelic.java-agent/newrelic-api "2.9.0"]]
+{% endcodeblock %}
+
+Enabling New Relic requires launching the JVM using the @-javaagent@ switch.  The startup time of the agent leaves much to be desired.  Given this, I've found it useful to conditionally enable New Relic via a leiningen profile.
+
+{% codeblock Add New Relic Agent jar lang:clojure %}
+{:profiles {:newrelic {:jvm-opts [ "-Dextensions.dir=<path>/extensions"
+                                   "-javaagent:<path>/newrelic.jar"]}}}
+{% endcodeblock %}
+
+
+h3.  Instrumentation of AOT Compiled Code
+
+Adding a custom annotation in Clojure isn't always practical.  Let's consider the case where we wanted to instrument the custom JSON library "cheshire":https://github.com/dakrone/cheshire.  If we were calling *parse-string* we could create functions that call through a method containing the custom @Trace@ annotation as Sean Corfield describes "here":http://corfield.org/blog/post.cfm/instrumenting-clojure-for-new-relic-monitoring.  This works but involves extra stubs used only to satisfy New Relic's use of annotations.
+
+If you're willing to trade the downsides of AOT compilation for better instrumentation we can use New Relic's "custom XML extensions":https://newrelic.com/docs/java/custom-xml-examples.  We acheive this by using an AOT compiled uberjar.  Currently, this trade-off is worth for us but YMMV.
+
+h4.  Instrumenting Clojure Functions with Custom XML Extensions
+
+In many cases the AOT compiled function has a name that is very easy to find.  An anonymous function is not one of these cases.
+
+The following is the roughly what the generated class looks like for the function "cheshire.core/parse-string":https://github.com/dakrone/cheshire/blob/master/src/cheshire/core.clj#L80.
+
+{% codeblock generated Cheshire signature lang:java %}
+package cheshire;
+...
+public final class core$parse_string extends RestFn
+{
+  ...
+  public Object doInvoke(Object string, Object p__4015) { ... }
+
+  public int getRequiredArity()
+  {
+    return 1;
+  }
+}
+{% endcodeblock %}
+
+Now that we know what the method signature looks like, we can add the custom extension XML.
+
+Add the following XML to a file called @cheshire.xml@ within the @extensions@ folder of your New Relic install.
+
+{% codeblock New Relic Extension XML lang:xml %}
+<urn:extension xmlns:urn="newrelic-extension" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="newrelic-extension extension.xsd " name="Cheshire" version="1.0">
+  <urn:instrumentation metricPrefix="Custom/Cheshire">
+    <urn:pointcut>
+      <urn:className>cheshire.core$parse_string</urn:className>
+      <urn:method>
+        <urn:name>doInvoke</urn:name>
+        <urn:parameters>
+          <urn:type>java.lang.Object</urn:type>
+          <urn:type>java.lang.Object</urn:type>
+        </urn:parameters>
+      </urn:method>
+    </urn:pointcut>
+  </urn:instrumentation>
+</urn:extension>
+{% endcodeblock %}
+
+Once this is added and the application is restarted you should begin to see traces that include the generated class name for the @cheshire.core/parse-string@ function.  Additionally, using the excellent New Relic thread profiler you can easily find new functions that would benefit from visibility in New Relic traces.

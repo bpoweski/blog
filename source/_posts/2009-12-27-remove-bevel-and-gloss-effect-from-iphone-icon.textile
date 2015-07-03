@@ -1,0 +1,15 @@
+---
+layout: post
+title: "Remove Bevel and Gloss Effect From iPhone Icon"
+date: 2008-12-27 16:59
+comments: true
+categories: ios objective-c
+---
+
+After search for this a bit, it is a simple property inside of your Info.plist.  To remove the bevel and gloss effect set the following property:
+
+{% codeblock %}
+UIPrerenderedIcon true
+{% endcodeblock %}
+
+For more properties check out the [Info.plist reference](http://developer.apple.com/iphone/library/documentation/iPhone/Conceptual/iPhoneOSProgrammingGuide/ApplicationEnvironment/chapter_3_section_4.html#//apple_ref/doc/uid/TP40007072-CH7-SW15).

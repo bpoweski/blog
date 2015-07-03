@@ -1,0 +1,57 @@
+---
+layout: post
+title: "Apple Push Notifications Toolkit for Ruby"
+date: 2009-09-17 16:45
+comments: true
+categories: ruby
+---
+
+Lately I've been working on an iPhone application that utilizes Push Notifications extensively.  While Apple provides great documentation there is still a fair amount of work left up to the developer to send push notification in ordinance to their usage policy.  
+
+Since I'm using Rails for the backend I needed a way to maintain a single open SSL connection to prevent setup and tear down for every notification sent.  To accomplish this I created an "Event Machine":http://rubyeventmachine.com/ based server deamon that that proxies all requests send by Rails application over a local, non SSL socket.
+
+The proxy queues and sends each notification to the Apple notification servers.  Additionally I've created a command line script to send notifications for testing purposes.  My project "Apn Server":http://github.com/bpoweski/apnserver/ is hosted on "Github":http://www.github.com/.
+
+You can add it to your Rails application via
+
+{% codeblock %}
+config.gem "bpoweski-apnserver", :lib => 'apnserver', 
+  :source => "http://gems.github.com"
+{% endcodeblock %}
+
+You can use either a direct connection to Apple or one through the apnserverd proxy included in the gem.  To configure directly to Apple's server (and also setting up and tearing down a new connection each time).  Add the following to your environment.rb.
+
+{% codeblock %}
+  ApnServer::Config.pem = '/path/to/pem'
+  ApnServer::Config.host = 'gateway.push.apple.com'
+  ApnServer::Config.port = 2195
+{% endcodeblock %}
+
+To use the non SSL apnserverd proxy simply drop the PEM configuration option
+
+{% codeblock %}
+  ApnServer::Config.host = 'localhost'
+  ApnServer::Config.port = 22195
+{% endcodeblock %}
+
+To send a notification from Ruby
+
+{% codeblock %}
+  notification = ApnServer::Notification.new
+  notification.device_token = Base64.decode64(apns_token)
+  notification.alert = message
+  notification.badge = 1
+  notification.sound = 'default'
+  notification.push
+{% endcodeblock %}
+
+You can also send notifications via the line with
+
+{% codeblock %}
+  $ apnsend --server gateway.push.apple.com --port 2195 \
+     --pem key.pem \
+     --b64-token j92f12jh8lqcAwcOVeSIrsBxibaJ0xyCi8/AkmzNlk8= \
+     --sound default \
+     --alert Hello
+{% endcodeblock %}
+

@@ -1,0 +1,418 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>Parsing CSS with ANTLR - Ben Poweski</title>
+  <meta name="author" content="Ben Poweski">
+
+  
+  <meta name="description" content="
+
+  
+    
+      Parsing CSS with ANTLR
+    
+    
+      
+        
+        
+      
+    
+  
+
+
+For a project I&quot;m working on, we&#8217;ve used CSS ...">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://bensblog.com/blog/2008/05/23/parsing-css-with-antlr/">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="Ben Poweski" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<!--- MathJax Configuration -->
+<script type="text/javascript"
+src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML,http://drz.ac/javascripts/MathJaxLocal.js">
+</script>
+  <script>
+    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+    (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+    m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+    })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+    ga('create', 'UA-1402132-3', 'bensblog.com');
+    ga('send', 'pageview');
+
+  </script>
+</head>
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">Ben Poweski</a></h1>
+  
+</hgroup></header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:http://bensblog.com" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul></nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  <header>
+    
+      <h1 class="entry-title">Parsing CSS with ANTLR</h1>
+    
+    
+      <p class="meta">
+        <time datetime="2008-05-23T17:01:00-05:00" pubdate data-updated="true"></time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>For a project I&quot;m working on, we&#8217;ve used <span class="caps">CSS</span> syntax to describe styling on application objects.  To accomplish this we created a parser using Antlr. Here is our implementation of the <span class="caps">CSS</span> core syntax.  Unicode support is left out as it was not needed for our use case, but it should be pretty easy to add in.</p>
+<figure class='code-highlight-figure'><div class='code-highlight'><pre class='code-highlight-pre'><div data-line='1' class='code-highlight-row numbered'><div class='code-highlight-line'>grammar CssCore;</div><p></div><div data-line='2' class='code-highlight-row numbered'><div class='code-highlight-line'>options &amp;#x7b; language=Java; &amp;#x7d;</p>
+<p></div></div><div data-line='3' class='code-highlight-row numbered'><div class='code-highlight-line'> </div></div><div data-line='4' class='code-highlight-row numbered'><div class='code-highlight-line'>/*</p>
+<p></div></div><div data-line='5' class='code-highlight-row numbered'><div class='code-highlight-line'> </div></div><div data-line='6' class='code-highlight-row numbered'><div class='code-highlight-line'>Grammar taken from</p>
+<p></div></div><div data-line='7' class='code-highlight-row numbered'><div class='code-highlight-line'>http://www.w3.org/TR/<span class="caps">REC</span>-CSS2/syndata.html#tokenization</p>
+<p></div></div><div data-line='8' class='code-highlight-row numbered'><div class='code-highlight-line'> </div></div><div data-line='9' class='code-highlight-row numbered'><div class='code-highlight-line'>*/</p>
+<p></div></div><div data-line='10' class='code-highlight-row numbered'><div class='code-highlight-line'> </div></div><div data-line='11' class='code-highlight-row numbered'><div class='code-highlight-line'>//stylesheet  : [ <span class="caps">CDO</span> | <span class="caps">CDC</span> | S | statement ]*;</p>
+<p></div></div><div data-line='12' class='code-highlight-row numbered'><div class='code-highlight-line'>stylesheet</p>
+<p></div></div><div data-line='13' class='code-highlight-row numbered'><div class='code-highlight-line'>	:	(<span class="caps">CDO</span>|<span class="caps">CDC</span>|statement)*</p>
+<p></div></div><div data-line='14' class='code-highlight-row numbered'><div class='code-highlight-line'>	;</p>
+<p></div></div><div data-line='15' class='code-highlight-row numbered'><div class='code-highlight-line'> </div></div><div data-line='16' class='code-highlight-row numbered'><div class='code-highlight-line'> </div></div><div data-line='17' class='code-highlight-row numbered'><div class='code-highlight-line'>//statement   : ruleset | at-rule;</p>
+<p></div></div><div data-line='18' class='code-highlight-row numbered'><div class='code-highlight-line'>statement</p>
+<p></div></div><div data-line='19' class='code-highlight-row numbered'><div class='code-highlight-line'>	:	ruleset</p>
+<p></div></div><div data-line='20' class='code-highlight-row numbered'><div class='code-highlight-line'>	|	atRule</p>
+<p></div></div><div data-line='21' class='code-highlight-row numbered'><div class='code-highlight-line'>	;</p>
+<p></div></div><div data-line='22' class='code-highlight-row numbered'><div class='code-highlight-line'> </div></div><div data-line='23' class='code-highlight-row numbered'><div class='code-highlight-line'>//at-rule     : <span class="caps">ATKEYWORD</span> S* any* [ block | &#8216;;&#8217; S* ];</p>
+<p></div></div><div data-line='24' class='code-highlight-row numbered'><div class='code-highlight-line'>atRule	:	<span class="caps">ATKEYWORD</span> any* (block | <span class="caps">SEMICOLON</span>)</p>
+<p></div></div><div data-line='25' class='code-highlight-row numbered'><div class='code-highlight-line'>	;</p>
+<p></div></div><div data-line='26' class='code-highlight-row numbered'><div class='code-highlight-line'> </div></div><div data-line='27' class='code-highlight-row numbered'><div class='code-highlight-line'>//block       : &#8216;&amp;#x7b;&#8217; S* [ any | block | <span class="caps">ATKEYWORD</span> S* | &#8216;;&#8217; ]* &#8216;&amp;#x7d;&#8217; S*;</p>
+<p></div></div><div data-line='28' class='code-highlight-row numbered'><div class='code-highlight-line'>block	:	<span class="caps">LBRACE</span> (any|block|<span class="caps">ATKEYWORD</span>|<span class="caps">SEMICOLON</span>)* <span class="caps">RBRACE</span></p>
+<p></div></div><div data-line='29' class='code-highlight-row numbered'><div class='code-highlight-line'>	;</p>
+<p></div></div><div data-line='30' class='code-highlight-row numbered'><div class='code-highlight-line'> </div></div><div data-line='31' class='code-highlight-row numbered'><div class='code-highlight-line'>//ruleset     : selector? &#8216;&amp;#x7b;&#8217; S* declaration? [ &#8216;;&#8217; S* declaration? ]* &#8216;&amp;#x7d;&#8217; S*;</p>
+<p></div></div><div data-line='32' class='code-highlight-row numbered'><div class='code-highlight-line'> </div></div><div data-line='33' class='code-highlight-row numbered'><div class='code-highlight-line'>selector:	&#8216;*&#8217;</p>
+<p></div></div><div data-line='34' class='code-highlight-row numbered'><div class='code-highlight-line'>	|	&#8216;*&#8217;? (<span class="caps">IDENT</span>|&#8216;&gt;&#8217;|&#8216;+&#8217;|<span class="caps">CLASS</span>|<span class="caps">HASH</span>)+</p>
+<p></div></div><div data-line='35' class='code-highlight-row numbered'><div class='code-highlight-line'>	;</p>
+<p></div></div><div data-line='36' class='code-highlight-row numbered'><div class='code-highlight-line'> </div></div><div data-line='37' class='code-highlight-row numbered'><div class='code-highlight-line'> </div></div><div data-line='38' class='code-highlight-row numbered'><div class='code-highlight-line'>ruleset	:	selector? <span class="caps">LBRACE</span> declaration? ( <span class="caps">SEMICOLON</span> declaration? )* <span class="caps">RBRACE</span></p>
+<p></div></div><div data-line='39' class='code-highlight-row numbered'><div class='code-highlight-line'>	;</p>
+<p></div></div><div data-line='40' class='code-highlight-row numbered'><div class='code-highlight-line'> </div></div><div data-line='41' class='code-highlight-row numbered'><div class='code-highlight-line'>//selector    : any+;</p>
+<p></div></div><div data-line='42' class='code-highlight-row numbered'><div class='code-highlight-line'> </div></div><div data-line='43' class='code-highlight-row numbered'><div class='code-highlight-line'>//declaration : property &#8216;:&#8217; S* value;</p>
+<p></div></div><div data-line='44' class='code-highlight-row numbered'><div class='code-highlight-line'>declaration</p>
+<p></div></div><div data-line='45' class='code-highlight-row numbered'><div class='code-highlight-line'>	:	property <span class="caps">COLON</span> value</p>
+<p></div></div><div data-line='46' class='code-highlight-row numbered'><div class='code-highlight-line'>	;</p>
+<p></div></div><div data-line='47' class='code-highlight-row numbered'><div class='code-highlight-line'> </div></div><div data-line='48' class='code-highlight-row numbered'><div class='code-highlight-line'>//property    : <span class="caps">IDENT</span> S*;</p>
+<p></div></div><div data-line='49' class='code-highlight-row numbered'><div class='code-highlight-line'>property:	<span class="caps">IDENT</span></p>
+<p></div></div><div data-line='50' class='code-highlight-row numbered'><div class='code-highlight-line'>	 ;</p>
+<p></div></div><div data-line='51' class='code-highlight-row numbered'><div class='code-highlight-line'> </div></div><div data-line='52' class='code-highlight-row numbered'><div class='code-highlight-line'>//value       : [ any | block | <span class="caps">ATKEYWORD</span> S* ]+;</p>
+<p></div></div><div data-line='53' class='code-highlight-row numbered'><div class='code-highlight-line'>value	:	(any|block|<span class="caps">ATKEYWORD</span>)*</p>
+<p></div></div><div data-line='54' class='code-highlight-row numbered'><div class='code-highlight-line'>          ;</p>
+<p></div></div><div data-line='55' class='code-highlight-row numbered'><div class='code-highlight-line'> </div></div><div data-line='56' class='code-highlight-row numbered'><div class='code-highlight-line'>//any         : [ <span class="caps">IDENT</span> | <span class="caps">NUMBER</span> | <span class="caps">PERCENTAGE</span> | <span class="caps">DIMENSION</span> | <span class="caps">STRING</span></p>
+<p></div></div><div data-line='57' class='code-highlight-row numbered'><div class='code-highlight-line'>//              | <span class="caps">DELIM</span> | <span class="caps">URI</span> | <span class="caps">HASH</span> | <span class="caps">UNICODE</span>-<span class="caps">RANGE</span> | <span class="caps">INCLUDES</span></p>
+<p></div></div><div data-line='58' class='code-highlight-row numbered'><div class='code-highlight-line'>//              | <span class="caps">FUNCTION</span> | <span class="caps">DASHMATCH</span> | &#8216;(&#8217; any* &#8216;)&#8217; | &#8216;[&#8217; any* &#8216;]&#8217; ] S*;</p>
+<p></div></div><div data-line='59' class='code-highlight-row numbered'><div class='code-highlight-line'>any	:	(	<span class="caps">IDENT</span>|<span class="caps">NUMBER</span>|<span class="caps">PERCENTAGE</span>|<span class="caps">DIMENSION</span>|<span class="caps">STRING</span>|</p>
+<p></div></div><div data-line='60' class='code-highlight-row numbered'><div class='code-highlight-line'>			<span class="caps">HASH</span>|<span class="caps">INCLUDES</span>|</p>
+<p></div></div><div data-line='61' class='code-highlight-row numbered'><div class='code-highlight-line'>			<span class="caps">FUNCTION</span>|<span class="caps">DASHMATCH</span></p>
+<p></div></div><div data-line='62' class='code-highlight-row numbered'><div class='code-highlight-line'>			// <span class="caps">TODO</span> UNICODE_RANGE|<span class="caps">DELIM</span>|<span class="caps">URI</span>| &#8216;(&#8217; any* &#8216;)&#8217; | &#8216;[&#8217; any* &#8216;]&#8217; ] S*;</p>
+<p></div></div><div data-line='63' class='code-highlight-row numbered'><div class='code-highlight-line'>		)</p>
+<p></div></div><div data-line='64' class='code-highlight-row numbered'><div class='code-highlight-line'>	;</p>
+<p></div></div><div data-line='65' class='code-highlight-row numbered'><div class='code-highlight-line'> </div></div><div data-line='66' class='code-highlight-row numbered'><div class='code-highlight-line'> </div></div><div data-line='67' class='code-highlight-row numbered'><div class='code-highlight-line'>/* Tokens */</p>
+<p></div></div><div data-line='68' class='code-highlight-row numbered'><div class='code-highlight-line'> </div></div><div data-line='69' class='code-highlight-row numbered'><div class='code-highlight-line'>//<span class="caps">IDENT</span> 	&amp;#x7b;ident&amp;#x7d;</p>
+<p></div></div><div data-line='70' class='code-highlight-row numbered'><div class='code-highlight-line'><span class="caps">IDENT</span>	:	F_IDENT</p>
+<p></div></div><div data-line='71' class='code-highlight-row numbered'><div class='code-highlight-line'>	;</p>
+<p></div></div><div data-line='72' class='code-highlight-row numbered'><div class='code-highlight-line'> </div></div><div data-line='73' class='code-highlight-row numbered'><div class='code-highlight-line'>//<span class="caps">ATKEYWORD</span> 	@&amp;#x7b;ident&amp;#x7d;</p>
+<p></div></div><div data-line='74' class='code-highlight-row numbered'><div class='code-highlight-line'><span class="caps">ATKEYWORD</span></p>
+<p></div></div><div data-line='75' class='code-highlight-row numbered'><div class='code-highlight-line'>	:	&#8216;@&#8217; F_IDENT</p>
+<p></div></div><div data-line='76' class='code-highlight-row numbered'><div class='code-highlight-line'>	;</p>
+<p></div></div><div data-line='77' class='code-highlight-row numbered'><div class='code-highlight-line'> </div></div><div data-line='78' class='code-highlight-row numbered'><div class='code-highlight-line'>//<span class="caps">STRING</span> 	&amp;#x7b;string&amp;#x7d;</p>
+<p></div></div><div data-line='79' class='code-highlight-row numbered'><div class='code-highlight-line'><span class="caps">STRING</span>	:	F_STRING</p>
+<p></div></div><div data-line='80' class='code-highlight-row numbered'><div class='code-highlight-line'>	;</p>
+<p></div></div><div data-line='81' class='code-highlight-row numbered'><div class='code-highlight-line'> </div></div><div data-line='82' class='code-highlight-row numbered'><div class='code-highlight-line'>//<span class="caps">HASH</span> 	#&amp;#x7b;name&amp;#x7d;</p>
+<p></div></div><div data-line='83' class='code-highlight-row numbered'><div class='code-highlight-line'><span class="caps">HASH</span>	:	&#8216;#&#8217; F_NAME</p>
+<p></div></div><div data-line='84' class='code-highlight-row numbered'><div class='code-highlight-line'>	;</p>
+<p></div></div><div data-line='85' class='code-highlight-row numbered'><div class='code-highlight-line'> </div></div><div data-line='86' class='code-highlight-row numbered'><div class='code-highlight-line'>//<span class="caps">NUMBER</span> 	&amp;#x7b;num&amp;#x7d;</p>
+<p></div></div><div data-line='87' class='code-highlight-row numbered'><div class='code-highlight-line'><span class="caps">NUMBER</span>	:	F_NUM</p>
+<p></div></div><div data-line='88' class='code-highlight-row numbered'><div class='code-highlight-line'>	;</p>
+<p></div></div><div data-line='89' class='code-highlight-row numbered'><div class='code-highlight-line'> </div></div><div data-line='90' class='code-highlight-row numbered'><div class='code-highlight-line'>//<span class="caps">PERCENTAGE</span> 	&amp;#x7b;num&amp;#x7d;%</p>
+<p></div></div><div data-line='91' class='code-highlight-row numbered'><div class='code-highlight-line'><span class="caps">PERCENTAGE</span></p>
+<p></div></div><div data-line='92' class='code-highlight-row numbered'><div class='code-highlight-line'>	:	F_NUM &#8216;%&#8217;</p>
+<p></div></div><div data-line='93' class='code-highlight-row numbered'><div class='code-highlight-line'>	;</p>
+<p></div></div><div data-line='94' class='code-highlight-row numbered'><div class='code-highlight-line'> </div></div><div data-line='95' class='code-highlight-row numbered'><div class='code-highlight-line'>//<span class="caps">DIMENSION</span> 	&amp;#x7b;num&amp;#x7d;&amp;#x7b;ident&amp;#x7d;</p>
+<p></div></div><div data-line='96' class='code-highlight-row numbered'><div class='code-highlight-line'><span class="caps">DIMENSION</span></p>
+<p></div></div><div data-line='97' class='code-highlight-row numbered'><div class='code-highlight-line'>	:	F_NUM F_IDENT</p>
+<p></div></div><div data-line='98' class='code-highlight-row numbered'><div class='code-highlight-line'>	;</p>
+<p></div></div><div data-line='99' class='code-highlight-row numbered'><div class='code-highlight-line'> </div></div><div data-line='100' class='code-highlight-row numbered'><div class='code-highlight-line'>//<span class="caps">URI</span> 	url\(&amp;#x7b;w&amp;#x7d;&amp;#x7b;string&amp;#x7d;&amp;#x7b;w&amp;#x7d;\)</p>
+<p></div></div><div data-line='101' class='code-highlight-row numbered'><div class='code-highlight-line'>//|url\(&amp;#x7b;w&amp;#x7d;([!#$%&amp;<strong>-~]|&amp;#x7b;nonascii&amp;#x7d;|&amp;#x7b;escape&amp;#x7d;)</strong>&amp;#x7b;w&amp;#x7d;\)</p>
+<p></div></div><div data-line='102' class='code-highlight-row numbered'><div class='code-highlight-line'>//<span class="caps">UNICODE</span>-<span class="caps">RANGE</span> 	U\+[0-9A-F?]&amp;#x7b;1,6&amp;#x7d;(-[0-9A-F]&amp;#x7b;1,6&amp;#x7d;)?</p>
+<p></div></div><div data-line='103' class='code-highlight-row numbered'><div class='code-highlight-line'> </div></div><div data-line='104' class='code-highlight-row numbered'><div class='code-highlight-line'> </div></div><div data-line='105' class='code-highlight-row numbered'><div class='code-highlight-line'>//<span class="caps">CDO</span> 	&lt;!&#8212;</p>
+<p></div></div><div data-line='106' class='code-highlight-row numbered'><div class='code-highlight-line'><span class="caps">CDO</span>	:	&#8216;&lt;!&#8212;&#8217;</p>
+<p></div></div><div data-line='107' class='code-highlight-row numbered'><div class='code-highlight-line'>	;</p>
+<p></div></div><div data-line='108' class='code-highlight-row numbered'><div class='code-highlight-line'> </div></div><div data-line='109' class='code-highlight-row numbered'><div class='code-highlight-line'>//<span class="caps">CDC</span> 	&#8212;&gt;</p>
+<p></div></div><div data-line='110' class='code-highlight-row numbered'><div class='code-highlight-line'><span class="caps">CDC</span>	:	&#8216;&#8212;&gt;&#8217;</p>
+<p></div></div><div data-line='111' class='code-highlight-row numbered'><div class='code-highlight-line'>	;</p>
+<p></div></div><div data-line='112' class='code-highlight-row numbered'><div class='code-highlight-line'> </div></div><div data-line='113' class='code-highlight-row numbered'><div class='code-highlight-line'> </div></div><div data-line='114' class='code-highlight-row numbered'><div class='code-highlight-line'>//; 	;</p>
+<p></div></div><div data-line='115' class='code-highlight-row numbered'><div class='code-highlight-line'><span class="caps">SEMICOLON</span></p>
+<p></div></div><div data-line='116' class='code-highlight-row numbered'><div class='code-highlight-line'>	:	&#8216;;&#8217;</p>
+<p></div></div><div data-line='117' class='code-highlight-row numbered'><div class='code-highlight-line'>	;</p>
+<p></div></div><div data-line='118' class='code-highlight-row numbered'><div class='code-highlight-line'> </div></div><div data-line='119' class='code-highlight-row numbered'><div class='code-highlight-line'><span class="caps">COLON</span>	:	&#8216;:&#8217;</p>
+<p></div></div><div data-line='120' class='code-highlight-row numbered'><div class='code-highlight-line'>	;</p>
+<p></div></div><div data-line='121' class='code-highlight-row numbered'><div class='code-highlight-line'> </div></div><div data-line='122' class='code-highlight-row numbered'><div class='code-highlight-line'> </div></div><div data-line='123' class='code-highlight-row numbered'><div class='code-highlight-line'>//&amp;#x7b; 	\&amp;#x7b;</p>
+<p></div></div><div data-line='124' class='code-highlight-row numbered'><div class='code-highlight-line'><span class="caps">LBRACE</span>	:	&#8216;&amp;#x7b;&#8217;</p>
+<p></div></div><div data-line='125' class='code-highlight-row numbered'><div class='code-highlight-line'>	;</p>
+<p></div></div><div data-line='126' class='code-highlight-row numbered'><div class='code-highlight-line'> </div></div><div data-line='127' class='code-highlight-row numbered'><div class='code-highlight-line'>//&amp;#x7d; 	\&amp;#x7d;</p>
+<p></div></div><div data-line='128' class='code-highlight-row numbered'><div class='code-highlight-line'><span class="caps">RBRACE</span>	:	&#8216;&amp;#x7d;&#8217;</p>
+<p></div></div><div data-line='129' class='code-highlight-row numbered'><div class='code-highlight-line'>	;</p>
+<p></div></div><div data-line='130' class='code-highlight-row numbered'><div class='code-highlight-line'> </div></div><div data-line='131' class='code-highlight-row numbered'><div class='code-highlight-line'>//( 	\(</p>
+<p></div></div><div data-line='132' class='code-highlight-row numbered'><div class='code-highlight-line'><span class="caps">LPAREN</span>	:	&#8216;(&#8217;</p>
+<p></div></div><div data-line='133' class='code-highlight-row numbered'><div class='code-highlight-line'>	;</p>
+<p></div></div><div data-line='134' class='code-highlight-row numbered'><div class='code-highlight-line'> </div></div><div data-line='135' class='code-highlight-row numbered'><div class='code-highlight-line'>//) 	\)</p>
+<p></div></div><div data-line='136' class='code-highlight-row numbered'><div class='code-highlight-line'><span class="caps">RPAREN</span>	:	&#8216;)&#8217;</p>
+<p></div></div><div data-line='137' class='code-highlight-row numbered'><div class='code-highlight-line'>	;</p>
+<p></div></div><div data-line='138' class='code-highlight-row numbered'><div class='code-highlight-line'> </div></div><div data-line='139' class='code-highlight-row numbered'><div class='code-highlight-line'>//[ 	\[</p>
+<p></div></div><div data-line='140' class='code-highlight-row numbered'><div class='code-highlight-line'><span class="caps">LBRACKET</span>:	&#8216;[&#8217;</p>
+<p></div></div><div data-line='141' class='code-highlight-row numbered'><div class='code-highlight-line'>	;</p>
+<p></div></div><div data-line='142' class='code-highlight-row numbered'><div class='code-highlight-line'> </div></div><div data-line='143' class='code-highlight-row numbered'><div class='code-highlight-line'>//] 	\]</p>
+<p></div></div><div data-line='144' class='code-highlight-row numbered'><div class='code-highlight-line'><span class="caps">RBRACKET</span>:	&#8216;]&#8217;</p>
+<p></div></div><div data-line='145' class='code-highlight-row numbered'><div class='code-highlight-line'>	;</p>
+<p></div></div><div data-line='146' class='code-highlight-row numbered'><div class='code-highlight-line'> </div></div><div data-line='147' class='code-highlight-row numbered'><div class='code-highlight-line'>//S 	[ \t\r\n\f]+</p>
+<p></div></div><div data-line='148' class='code-highlight-row numbered'><div class='code-highlight-line'>S	:	(&#8217; &#8216;|&#8217;\t&#8217;|&#8216;\r&#8217;|&#8216;\n&#8217;|&#8216;\f&#8217;)+</p>
+<p></div></div><div data-line='149' class='code-highlight-row numbered'><div class='code-highlight-line'>		&amp;#x7b; $channel=<span class="caps">HIDDEN</span>; &amp;#x7d;</p>
+<p></div></div><div data-line='150' class='code-highlight-row numbered'><div class='code-highlight-line'>	;</p>
+<p></div></div><div data-line='151' class='code-highlight-row numbered'><div class='code-highlight-line'> </div></div><div data-line='152' class='code-highlight-row numbered'><div class='code-highlight-line'>//<span class="caps">COMMENT</span> 	\/\<strong>[^</strong><strong>\</strong><ins>([^/][^<strong>]</strong>\*</ins>)*\/</p>
+<p></div></div><div data-line='153' class='code-highlight-row numbered'><div class='code-highlight-line'><span class="caps">COMMENT</span>	:	&#8216;/*&#8217; (options &amp;#x7b;greedy=false;&amp;#x7d; : .)*   &#8216;*/&#8217;</p>
+<p></div></div><div data-line='154' class='code-highlight-row numbered'><div class='code-highlight-line'>		&amp;#x7b; $channel=<span class="caps">HIDDEN</span>; &amp;#x7d;</p>
+<p></div></div><div data-line='155' class='code-highlight-row numbered'><div class='code-highlight-line'>	;</p>
+<p></div></div><div data-line='156' class='code-highlight-row numbered'><div class='code-highlight-line'> </div></div><div data-line='157' class='code-highlight-row numbered'><div class='code-highlight-line'>//<span class="caps">FUNCTION</span> 	&amp;#x7b;ident&amp;#x7d;\(</p>
+<p></div></div><div data-line='158' class='code-highlight-row numbered'><div class='code-highlight-line'><span class="caps">FUNCTION</span>:	F_IDENT &#8216;(&#8217;</p>
+<p></div></div><div data-line='159' class='code-highlight-row numbered'><div class='code-highlight-line'>	;</p>
+<p></div></div><div data-line='160' class='code-highlight-row numbered'><div class='code-highlight-line'> </div></div><div data-line='161' class='code-highlight-row numbered'><div class='code-highlight-line'>//<span class="caps">INCLUDES</span> 	~=</p>
+<p></div></div><div data-line='162' class='code-highlight-row numbered'><div class='code-highlight-line'><span class="caps">INCLUDES</span>:	&#8216;~=&#8217;</p>
+<p></div></div><div data-line='163' class='code-highlight-row numbered'><div class='code-highlight-line'>	;</p>
+<p></div></div><div data-line='164' class='code-highlight-row numbered'><div class='code-highlight-line'> </div></div><div data-line='165' class='code-highlight-row numbered'><div class='code-highlight-line'>//<span class="caps">DASHMATCH</span> 	|=</p>
+<p></div></div><div data-line='166' class='code-highlight-row numbered'><div class='code-highlight-line'><span class="caps">DASHMATCH</span></p>
+<p></div></div><div data-line='167' class='code-highlight-row numbered'><div class='code-highlight-line'>	:	&#8216;|=&#8217;</p>
+<p></div></div><div data-line='168' class='code-highlight-row numbered'><div class='code-highlight-line'>	;</p>
+<p></div></div><div data-line='169' class='code-highlight-row numbered'><div class='code-highlight-line'> </div></div><div data-line='170' class='code-highlight-row numbered'><div class='code-highlight-line'>//<span class="caps">DELIM</span> 	any other character not matched by the above rules</p>
+<p></div></div><div data-line='171' class='code-highlight-row numbered'><div class='code-highlight-line'> </div></div><div data-line='172' class='code-highlight-row numbered'><div class='code-highlight-line'><span class="caps">CLASS</span>	:	&#8216;.&#8217; F_IDENT</p>
+<p></div></div><div data-line='173' class='code-highlight-row numbered'><div class='code-highlight-line'>	;</p>
+<p></div></div><div data-line='174' class='code-highlight-row numbered'><div class='code-highlight-line'> </div></div><div data-line='175' class='code-highlight-row numbered'><div class='code-highlight-line'> </div></div><div data-line='176' class='code-highlight-row numbered'><div class='code-highlight-line'>//ident 	&amp;#x7b;nmstart&amp;#x7d;&amp;#x7b;nmchar&amp;#x7d;*</p>
+<p></div></div><div data-line='177' class='code-highlight-row numbered'><div class='code-highlight-line'>fragment</p>
+<p></div></div><div data-line='178' class='code-highlight-row numbered'><div class='code-highlight-line'>F_IDENT	:	F_NMSTART F_NMCHAR*</p>
+<p></div></div><div data-line='179' class='code-highlight-row numbered'><div class='code-highlight-line'>	;</p>
+<p></div></div><div data-line='180' class='code-highlight-row numbered'><div class='code-highlight-line'> </div></div><div data-line='181' class='code-highlight-row numbered'><div class='code-highlight-line'>//name 	&amp;#x7b;nmchar&amp;#x7d;+</p>
+<p></div></div><div data-line='182' class='code-highlight-row numbered'><div class='code-highlight-line'>fragment</p>
+<p></div></div><div data-line='183' class='code-highlight-row numbered'><div class='code-highlight-line'>F_NAME	:	F_NMCHAR+</p>
+<p></div></div><div data-line='184' class='code-highlight-row numbered'><div class='code-highlight-line'>	;</p>
+<p></div></div><div data-line='185' class='code-highlight-row numbered'><div class='code-highlight-line'> </div></div><div data-line='186' class='code-highlight-row numbered'><div class='code-highlight-line'>//nmstart 	[a-zA-Z]|&amp;#x7b;nonascii&amp;#x7d;|&amp;#x7b;escape&amp;#x7d;</p>
+<p></div></div><div data-line='187' class='code-highlight-row numbered'><div class='code-highlight-line'>fragment</p>
+<p></div></div><div data-line='188' class='code-highlight-row numbered'><div class='code-highlight-line'>F_NMSTART</p>
+<p></div></div><div data-line='189' class='code-highlight-row numbered'><div class='code-highlight-line'>	:	(F_LETTER)</p>
+<p></div></div><div data-line='190' class='code-highlight-row numbered'><div class='code-highlight-line'>// <span class="caps">TODO</span>	add nonascii, escaped</p>
+<p></div></div><div data-line='191' class='code-highlight-row numbered'><div class='code-highlight-line'>	;</p>
+<p></div></div><div data-line='192' class='code-highlight-row numbered'><div class='code-highlight-line'> </div></div><div data-line='193' class='code-highlight-row numbered'><div class='code-highlight-line'>//nonascii	[^\0-\177]</p>
+<p></div></div><div data-line='194' class='code-highlight-row numbered'><div class='code-highlight-line'>//unicode 	\\[0-9a-f]&amp;#x7b;1,6&amp;#x7d;[ \n\r\t\f]?</p>
+<p></div></div><div data-line='195' class='code-highlight-row numbered'><div class='code-highlight-line'>//escape 	&amp;#x7b;unicode&amp;#x7d;|\\[ <del>~\200</del>\4177777]</p>
+<p></div></div><div data-line='196' class='code-highlight-row numbered'><div class='code-highlight-line'> </div></div><div data-line='197' class='code-highlight-row numbered'><div class='code-highlight-line'>//nmchar 	[a-z0-9-]|&amp;#x7b;nonascii&amp;#x7d;|&amp;#x7b;escape&amp;#x7d;</p>
+<p></div></div><div data-line='198' class='code-highlight-row numbered'><div class='code-highlight-line'>fragment</p>
+<p></div></div><div data-line='199' class='code-highlight-row numbered'><div class='code-highlight-line'>F_NMCHAR:	(F_LETTER|F_DIGIT|&#8216;-&#8217;)</p>
+<p></div></div><div data-line='200' class='code-highlight-row numbered'><div class='code-highlight-line'>// <span class="caps">TODO</span>	add nonascii, escaped</p>
+<p></div></div><div data-line='201' class='code-highlight-row numbered'><div class='code-highlight-line'>	;</p>
+<p></div></div><div data-line='202' class='code-highlight-row numbered'><div class='code-highlight-line'> </div></div><div data-line='203' class='code-highlight-row numbered'><div class='code-highlight-line'>//num 	[0-9]<ins>|[0-9]*\.[0-9]</ins></p>
+<p></div></div><div data-line='204' class='code-highlight-row numbered'><div class='code-highlight-line'>fragment</p>
+<p></div></div><div data-line='205' class='code-highlight-row numbered'><div class='code-highlight-line'>F_NUM	:	(&#8216;0&#8217;..&#8216;9&#8217;)+</p>
+<p></div></div><div data-line='206' class='code-highlight-row numbered'><div class='code-highlight-line'>	|	(&#8216;0&#8217;..&#8216;9&#8217;)* &#8216;.&#8217; (&#8216;0&#8217;..&#8216;9&#8217;)+</p>
+<p></div></div><div data-line='207' class='code-highlight-row numbered'><div class='code-highlight-line'>	;</p>
+<p></div></div><div data-line='208' class='code-highlight-row numbered'><div class='code-highlight-line'> </div></div><div data-line='209' class='code-highlight-row numbered'><div class='code-highlight-line'> </div></div><div data-line='210' class='code-highlight-row numbered'><div class='code-highlight-line'>//string 	&amp;#x7b;string1&amp;#x7d;|&amp;#x7b;string2&amp;#x7d;</p>
+<p></div></div><div data-line='211' class='code-highlight-row numbered'><div class='code-highlight-line'>fragment</p>
+<p></div></div><div data-line='212' class='code-highlight-row numbered'><div class='code-highlight-line'>F_STRING:	F_STRING1</p>
+<p></div></div><div data-line='213' class='code-highlight-row numbered'><div class='code-highlight-line'>	|	F_STRING2</p>
+<p></div></div><div data-line='214' class='code-highlight-row numbered'><div class='code-highlight-line'>	;</p>
+<p></div></div><div data-line='215' class='code-highlight-row numbered'><div class='code-highlight-line'> </div></div><div data-line='216' class='code-highlight-row numbered'><div class='code-highlight-line'>//string1 	\&#8220;([\t !#$%&amp;(-~]|\\&amp;#x7b;nl&amp;#x7d;|\&#8217;|&amp;#x7b;nonascii&amp;#x7d;|&amp;#x7b;escape&amp;#x7d;)*\&#8221;</p>
+<p></div></div><div data-line='217' class='code-highlight-row numbered'><div class='code-highlight-line'>fragment</p>
+<p></div></div><div data-line='218' class='code-highlight-row numbered'><div class='code-highlight-line'>F_STRING1</p>
+<p></div></div><div data-line='219' class='code-highlight-row numbered'><div class='code-highlight-line'>	:	&#8216;&quot;&#8217; (&#8216;\t&#8217;|&#8217; &#8216;|&#8217;!&#8216;|&#8217;#&#8216;|&#8217;$&#8216;|&#8217;%&#8216;|&#8217;&amp;&#8216;|&#8217;\&#8216;&#8217;|&#8217;.&#8216;|F_LETTER|F_DIGIT)* &#8217;&quot;&#8217;</p>
+<p></div></div><div data-line='220' class='code-highlight-row numbered'><div class='code-highlight-line'>	;</p>
+<p></div></div><div data-line='221' class='code-highlight-row numbered'><div class='code-highlight-line'>//string2 	\&#8216;([\t !#$%&amp;(-~]|\\&amp;#x7b;nl&amp;#x7d;|\&quot;|&amp;#x7b;nonascii&amp;#x7d;|&amp;#x7b;escape&amp;#x7d;)*\&#8217;</p>
+<p></div></div><div data-line='222' class='code-highlight-row numbered'><div class='code-highlight-line'>fragment</p>
+<p></div></div><div data-line='223' class='code-highlight-row numbered'><div class='code-highlight-line'>F_STRING2</p>
+<p></div></div><div data-line='224' class='code-highlight-row numbered'><div class='code-highlight-line'>	:	&#8216;\&#8217;&#8217; (&#8216;\t&#8217;|&#8217; &#8216;|&#8217;!&#8216;|&#8217;#&#8216;|&#8217;$&#8216;|&#8217;%&#8216;|&#8217;&amp;&#8216;|&#8217;.&#8216;|F_LETTER|F_DIGIT)* &#8217;\&#8217;&#8217;</p>
+<p></div></div><div data-line='225' class='code-highlight-row numbered'><div class='code-highlight-line'>	;</p>
+<p></div></div><div data-line='226' class='code-highlight-row numbered'><div class='code-highlight-line'> </div></div><div data-line='227' class='code-highlight-row numbered'><div class='code-highlight-line'>//nl 	\n|\r\n|\r|\f</p>
+<p></div></div><div data-line='228' class='code-highlight-row numbered'><div class='code-highlight-line'>fragment</p>
+<p></div></div><div data-line='229' class='code-highlight-row numbered'><div class='code-highlight-line'>F_NL	:	&#8216;\n&#8217;</p>
+<p></div></div><div data-line='230' class='code-highlight-row numbered'><div class='code-highlight-line'>	|	&#8216;\r\n&#8217;</p>
+<p></div></div><div data-line='231' class='code-highlight-row numbered'><div class='code-highlight-line'>	|	&#8216;\r&#8217;</p>
+<p></div></div><div data-line='232' class='code-highlight-row numbered'><div class='code-highlight-line'>	|	&#8216;\f&#8217;</p>
+<p></div></div><div data-line='233' class='code-highlight-row numbered'><div class='code-highlight-line'>	;</p>
+<p></div></div><div data-line='234' class='code-highlight-row numbered'><div class='code-highlight-line'> </div></div><div data-line='235' class='code-highlight-row numbered'><div class='code-highlight-line'>fragment</p>
+<p></div></div><div data-line='236' class='code-highlight-row numbered'><div class='code-highlight-line'>F_LETTER:	&#8216;a&#8217;..&#8216;z&#8217;</p>
+<p></div></div><div data-line='237' class='code-highlight-row numbered'><div class='code-highlight-line'>	|	&#8216;A&#8217;..&#8216;Z&#8217;</p>
+<p></div></div><div data-line='238' class='code-highlight-row numbered'><div class='code-highlight-line'>	;</p>
+<p></div></div><div data-line='239' class='code-highlight-row numbered'><div class='code-highlight-line'> </div></div><div data-line='240' class='code-highlight-row numbered'><div class='code-highlight-line'>fragment</p>
+<p></div></div><div data-line='241' class='code-highlight-row numbered'><div class='code-highlight-line'>F_DIGIT	:	&#8216;0&#8217;..&#8216;9&#8217;</p>
+<p></div></div><div data-line='242' class='code-highlight-row numbered'><div class='code-highlight-line'>	;</p>
+<p></div></div><div data-line='243' class='code-highlight-row numbered'><div class='code-highlight-line'> </div></div><div data-line='244' class='code-highlight-row numbered'><div class='code-highlight-line'>//w 	[ \t\r\n\f]*</p>
+<p></div></div><div data-line='245' class='code-highlight-row numbered'><div class='code-highlight-line'>fragment</p>
+<p></div></div><div data-line='246' class='code-highlight-row numbered'><div class='code-highlight-line'>F_W	:	(&#8217; &#8216;|&#8217;\t&#8217;|&#8216;\r&#8217;|&#8216;\n&#8217;|&#8216;\f&#8217;)*</p>
+<p></div></div><div data-line='247' class='code-highlight-row numbered'><div class='code-highlight-line'>	;</div></div></pre></div></figure></p></div>
+  <footer>
+    <p class="meta">
+      <span class="byline author vcard">Posted by <span class="fn">Ben Poweski</span></span>
+      <time datetime="2008-05-23T17:01:00-05:00" pubdate data-updated="true"></time>
+      
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="http://twitter.com/share" class="twitter-share-button" data-url="http://bensblog.com/blog/2008/05/23/parsing-css-with-antlr/" data-via="bpoweski" data-counturl="http://bensblog.com/blog/2008/05/23/parsing-css-with-antlr/" >Tweet</a>
+  
+  
+  
+</div>
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2008/04/28/securing-data-wtih-openssl-and-ruby/" title="Previous Post: Securing Data wtih OpenSSL and Ruby: Part One">&laquo; Securing Data wtih OpenSSL and Ruby: Part One</a>
+      
+      
+        <a class="basic-alignment right" href="/blog/2008/12/27/remove-bevel-and-gloss-effect-from-iphone-icon/" title="Next Post: Remove Bevel and Gloss Effect From iPhone Icon">Remove Bevel and Gloss Effect From iPhone Icon &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript></div>
+  </section>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2014/03/29/a-simple-monte-carlo-experiment-in-r-more-pi/">A Simple Monte Carlo Experiment in R: More &#120587;</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/06/15/using-new-relic-with-clojure/">Using New Relic with Clojure</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2009/09/17/apple-push-notifications-toolkit-for-ruby/">Apple Push Notifications Toolkit for Ruby</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2008/12/27/remove-bevel-and-gloss-effect-from-iphone-icon/">Remove Bevel and Gloss Effect From iPhone Icon</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2008/05/23/parsing-css-with-antlr/">Parsing CSS with ANTLR</a>
+      </li>
+    
+  </ul>
+</section>
+
+<section>
+  <h1>GitHub Repos</h1>
+  <ul id="gh_repos">
+    <li class="loading">Status updating...</li>
+  </ul>
+  
+  <a href="https://github.com/bpoweski">@bpoweski</a> on GitHub
+  
+  <script type="text/javascript">
+    $(document).ready(function(){
+        if (!window.jXHR){
+            var jxhr = document.createElement('script');
+            jxhr.type = 'text/javascript';
+            jxhr.src = '/javascripts/libs/jXHR.js';
+            var s = document.getElementsByTagName('script')[0];
+            s.parentNode.insertBefore(jxhr, s);
+        }
+
+        github.showRepos({
+            user: 'bpoweski',
+            count: 0,
+            skip_forks: true,
+            target: '#gh_repos'
+        });
+    });
+  </script>
+  <script src="/javascripts/github.js" type="text/javascript"> </script>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2015 - Ben Poweski -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p></footer>
+  <script type="text/javascript">
+      var disqus_shortname = 'benpoweskisblog';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://bensblog.com/blog/2008/05/23/parsing-css-with-antlr/';
+        var disqus_url = 'http://bensblog.com/blog/2008/05/23/parsing-css-with-antlr/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = 'http://' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+<script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = 'http://platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+<figure class='code-highlight-figure'><div class='code-highlight'><pre class='code-highlight-pre'><div data-line='1' class='code-highlight-row numbered'><div class='code-highlight-line'>notification = ApnServer::Notification.new
+</div></div><div data-line='2' class='code-highlight-row numbered'><div class='code-highlight-line'>  notification.device_token = Base64.decode64(apns_token)
+</div></div><div data-line='3' class='code-highlight-row numbered'><div class='code-highlight-line'>  notification.alert = message
+</div></div><div data-line='4' class='code-highlight-row numbered'><div class='code-highlight-line'>  notification.badge = 1
+</div></div><div data-line='5' class='code-highlight-row numbered'><div class='code-highlight-line'>  notification.sound = 'default'
+</div></div><div data-line='6' class='code-highlight-row numbered'><div class='code-highlight-line'>  notification.push</div></div></pre></div></figure>
