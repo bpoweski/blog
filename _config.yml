@@ -94,3 +94,8 @@ google_analytics_tracking_id: UA-1402132-3
 
 # Facebook Like
 facebook_like: false
+
+
+gems:
+  - octopress-include-tag
+  - octopress-codeblock
