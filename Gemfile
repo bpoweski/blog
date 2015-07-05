@@ -4,6 +4,7 @@ gem 'octopress', '~> 3.0'
 gem 'RedCloth'
 gem 'stringex'
 gem 'rdiscount'
+gem 'puma'
 
 group :jekyll_plugins do
   gem 'octopress-codeblock'
