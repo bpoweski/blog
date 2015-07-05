@@ -15,6 +15,7 @@ GEM
     execjs (2.5.2)
     fast-stemmer (1.0.2)
     ffi (1.9.10)
+    git-version-bump (0.15.1)
     hitimes (1.2.2)
     jekyll (2.5.3)
       classifier-reborn (~> 2.0)
@@ -79,9 +80,9 @@ GEM
       posix-spawn (~> 0.3.6)
       yajl-ruby (~> 1.2.0)
     rack (1.6.4)
-    rack-jekyll (0.3.5)
-      jekyll
-      rack
+    rack-contrib (1.3.0)
+      git-version-bump (~> 0.15)
+      rack (~> 1.4)
     rb-fsevent (0.9.5)
     rb-inotify (0.9.5)
       ffi (>= 0.5.0)
@@ -102,10 +103,11 @@ PLATFORMS
 
 DEPENDENCIES
   RedCloth
+  jekyll
   octopress (~> 3.0)
   octopress-codeblock
   octopress-include-tag
   puma
-  rack-jekyll
+  rack-contrib
   rdiscount
   stringex

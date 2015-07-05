@@ -1,9 +1,14 @@
-require 'rack/jekyll'
-require 'yaml'
-require 'octopress-codeblock'
-require 'octopress-include-tag'
+use Rack::Static,
+  :urls => ["/images", "/javascript", "/stylesheets"],
+  :root => "public"
 
-run Rack::URLMap.new( {
-  "/" => Rack::Directory.new("public"), # Serve our static content
-  "/" => Rack::Jekyll.new                 # Jekyll app
-})
+run lambda { |env|
+  [
+    200,
+    {
+      'Content-Type'  => 'text/html',
+      'Cache-Control' => 'public, max-age=86400'
+    },
+    File.open('public/index.html', File::RDONLY)
+  ]
+}

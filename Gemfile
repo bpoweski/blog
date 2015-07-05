@@ -5,7 +5,8 @@ gem 'RedCloth'
 gem 'stringex'
 gem 'rdiscount'
 gem 'puma'
-gem 'rack-jekyll'
+gem 'jekyll'
+gem 'rack-contrib'
 
 group :jekyll_plugins do
   gem 'octopress-codeblock'

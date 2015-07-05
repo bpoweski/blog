@@ -99,3 +99,5 @@ facebook_like: false
 gems:
   - octopress-include-tag
   - octopress-codeblock
+
+exclude: ['README.md', 'Gemfile', 'Gemfile.lock', 'Rakefile', 'config.ru', 'Procfile', 'vendor']
