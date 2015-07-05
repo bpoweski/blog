@@ -1,3 +1,0 @@
-<figure class='code-highlight-figure'><div class='code-highlight'><pre class='code-highlight-pre'><div data-line='1' class='code-highlight-row numbered'><div class='code-highlight-line'>attempts &lt;- seq(1, 100000, by=50)
-</div></div><div data-line='2' class='code-highlight-row numbered'><div class='code-highlight-line'>estimated &lt;- sapply(attempts, function(x) abs(calc.pi(make.pi(x)) - pi)/pi)
-</div></div><div data-line='3' class='code-highlight-row numbered'><div class='code-highlight-line'> </div></div><div data-line='4' class='code-highlight-row numbered'><div class='code-highlight-line'>ggplot(data.frame(estimated=estimated, n=attempts)) + geom_line(aes(x=n, y=estimated)) + ylab("error %")</div></div></pre></div></figure>
